@@ -1,6 +1,6 @@
 import sympy as sp
 from sympy.matrices import Matrix, eye, zeros, ones, diag, GramSchmidt
-from sympy import sin, cos, atan2,, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative
+from sympy import sin, cos, atan2, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative
 from sympy.vector import cross, CoordSys3D, ParametricRegion, ImplicitRegion, vector_integrate, Del, curl, express, divergence, gradient, ParametricIntegral
 from sympy.geometry import Point, Circle, Triangle
 from sympy import init_printing
