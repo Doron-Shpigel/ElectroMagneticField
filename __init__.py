@@ -14,3 +14,4 @@ P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi"
 S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
 
 from ElectroMagneticField.src.VectorPathIntegral import vector_path_integral, vector_circle_integral
+from ElectroMagneticField.src.Vectors import NewVector, NewVectorFunction, PrintVector

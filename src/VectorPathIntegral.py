@@ -7,6 +7,11 @@ from sympy import init_printing
 from sympy.printing import latex
 from sympy import Integral, integrate
 
+#Initial coordinate systems setup
+C = CoordSys3D('C') #(x, y, z)
+P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi", "z"]) #r, phi, z: (r*cos(phi), r*sin(phi), z)
+S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
+
 
 def vector_path_integral(V, cor1, cor2, cor3):
   system = V._sys
