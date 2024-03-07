@@ -1,11 +1,12 @@
 import sympy as sp
 from sympy.matrices import Matrix, eye, zeros, ones, diag, GramSchmidt
-from sympy import sin, cos, atan2, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative
-from sympy.vector import cross, CoordSys3D, ParametricRegion, ImplicitRegion, vector_integrate, Del, curl, express, divergence, gradient, ParametricIntegral
+from sympy import sin, cos, acos, atan2, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative
+from sympy.vector import Vector, cross, CoordSys3D, ParametricRegion, ImplicitRegion, vector_integrate, Del, curl, express, divergence, gradient, ParametricIntegral
 from sympy.geometry import Point, Circle, Triangle
 from sympy import init_printing
 from sympy.printing import latex
 from sympy import Integral, integrate
+from numpy import meshgrid, ravel
 
 #Initial coordinate systems setup
 C = CoordSys3D('C') #(x, y, z)
@@ -14,7 +15,6 @@ S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*
 
 
 def PrintVector(V):
-    from sympy.vector import Vector
     if isinstance(V, Vector):
         system = V._sys
         if system == C:
@@ -106,9 +106,57 @@ class NewVectorFunction:
         return self.vector
     def __str__(self):
         self.update_vector()
-        return printVector(self.vector)
+        return PrintVector(self.vector)
     def __repr__(self):
         self.update_vector()
         return self.vector
 
+def Cartesian_to_Spherical(x, y, z):
+    r = sqrt(x**2 + y**2 + z**2)
+    if r == 0:
+        return 0, 0, 0
+    theta = acos(z/r)
+    phi = atan2(y, x)
+    return r, theta, phi
 
+def Cartesian_to_Cylindrical(x, y, z):
+    r = sqrt(x**2 + y**2)
+    phi = atan2(y, x)
+    return r, phi, z
+
+class VectorMesh:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.x_mesh, self.y_mesh, self.z_mesh = meshgrid(x, y, z)
+        self.data = self.data()
+
+    class data:
+        def __init__(self, x_mesh, y_mesh, z_mesh):
+            self.x = x_mesh.ravel()
+            self.y = y_mesh.ravel()
+            self.z = z_mesh.ravel()
+
+    def field(self, func_system, func, **kwargs):
+        self.func = func
+        self.u_mesh, self.v_mesh, self.w_mesh = meshgrid(self.x, self.y, self.z)
+        from ElectroMagneticField.src.SpecialOperators import XYZ_to_Function
+        for i in range(len(self.x_mesh)):
+            for j in range(len(self.y_mesh)):
+                for k in range(len(self.z_mesh)):
+                    result_vector = XYZ_to_Function(self.x_mesh[i, j, k], self.y_mesh[i, j, k], self.z_mesh[i, j, k], func_system, func, **kwargs)
+                    self.u_mesh[i][j][k] = result_vector.coeff(C.i)
+                    self.v_mesh[i][j][k] = result_vector.coeff(C.j)
+                    self.w_mesh[i][j][k] = result_vector.coeff(C.k)
+        self.data.u = self.u_mesh.ravel()
+        self.data.v = self.v_mesh.ravel()
+        self.data.w = self.w_mesh.ravel()
+
+    def plotlyConeData(self, title = PrintVector(self.func), **kwargs):
+        import plotly.graph_objects as go
+        data = go.Cone(x=self.data.x, y=self.data.y, z=self.data.z,
+                u=self.data.u, v=self.data.v, w=self.data.w,
+                colorscale='Inferno', colorbar=dict(title=title),
+                sizemode="absolute", sizeref=0.1)
+        return data
