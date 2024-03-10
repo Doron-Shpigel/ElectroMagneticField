@@ -1,0 +1,7 @@
+LICENSE
+README.md
+setup.py
+ElectroMagneticField.egg-info/PKG-INFO
+ElectroMagneticField.egg-info/SOURCES.txt
+ElectroMagneticField.egg-info/dependency_links.txt
+ElectroMagneticField.egg-info/top_level.txt

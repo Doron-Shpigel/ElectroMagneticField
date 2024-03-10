@@ -8,7 +8,6 @@ C = CoordSys3D('C') #(x, y, z)
 P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi", "z"]) #r, phi, z: (r*cos(phi), r*sin(phi), z)
 S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
 
-from ElectroMagneticField.src.Vectors import Cartesian_to_Spherical, Cartesian_to_Cylindrical
 
 def change_derivatives_to_constant_by_denominator(expr, denominator, constant):
     new_expr = expr
@@ -18,14 +17,15 @@ def change_derivatives_to_constant_by_denominator(expr, denominator, constant):
     return new_expr
 
 def XYZ_to_Function(x_mesh, y_mesh, z_mesh, func_system, func, **kwargs):
+    from src.Vectors import Cartesian_to_Spherical, Cartesian_to_Cylindrical
     if func_system == C:
         return func(x_mesh, y_mesh, z_mesh, **kwargs)
     elif func_system == P:
         r , p, z = Cartesian_to_Cylindrical(x_mesh, y_mesh, z_mesh)
-        polarVector = r*P.i + t*P.j + z*P.k
+        polarVector = r*P.i + p*P.j + z*P.k
         ResultMatrix = func(polarVector, **kwargs).to_matrix(P)
         P_to_C_matrix = Matrix([[cos(p), -sin(p), 0], [sin(p), cos(p), 0], [0, 0, 1]])
-        return matrix_to_vector(P_to_C_matrix*ResultMatrix)
+        return matrix_to_vector(P_to_C_matrix*ResultMatrix, C)
     elif func_system == S:
         r, t, p = Cartesian_to_Spherical(x_mesh, y_mesh, z_mesh)
         sphericalVector = r*S.i + p*S.j + t*S.k
@@ -34,12 +34,28 @@ def XYZ_to_Function(x_mesh, y_mesh, z_mesh, func_system, func, **kwargs):
             [sin(t)*cos(p), cos(t)*cos(p), -sin(p)],
             [sin(t)*sin(p), cos(t)*sin(p), cos(p)],
             [cos(t), -sin(t), 0]])
-        return matrix_to_vector(S_to_C_matrix*ResultMatrix)
+        return matrix_to_vector(S_to_C_matrix*ResultMatrix, C)
     else:
         raise ValueError("func_system must be a valid coordinate system: C, P or S.")
-    
 
-
-
+def symetric_on_derivative(expr, system, variable=[]):
+    if system == C:
+        system_variables = [C.x, C.y, C.z]
+        for var in system_variables:
+            if var in variable:
+                expr = change_derivatives_to_constant_by_denominator(expr, var, 0)
+    elif system == P:
+        system_variables = [P.r, P.phi, P.z]
+        for var in system_variables:
+            if var  in variable:
+                expr = change_derivatives_to_constant_by_denominator(expr, var, 0)
+    elif system == S:
+        system_variables = [S.r, S.theta, S.phi]
+        for var in system_variables:
+            if var  in variable:
+                expr = change_derivatives_to_constant_by_denominator(expr, var, 0)
+    else:
+        raise ValueError("system must be a valid coordinate system: C, P or S.")
+    return expr
 
 

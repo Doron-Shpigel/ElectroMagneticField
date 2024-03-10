@@ -8,11 +8,14 @@ from sympy.printing import latex
 from sympy import Integral, integrate
 from numpy import meshgrid, ravel
 
-#Initial coordinate systems setup
-C = CoordSys3D('C') #(x, y, z)
-P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi", "z"]) #r, phi, z: (r*cos(phi), r*sin(phi), z)
-S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
+def coords():
+    #Initial coordinate systems setup
+    C = CoordSys3D('C') #(x, y, z)
+    P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi", "z"]) #r, phi, z: (r*cos(phi), r*sin(phi), z)
+    S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
+    return C, P, S
 
+C, P, S = coords()
 
 def PrintVector(V):
     if isinstance(V, Vector):
@@ -129,11 +132,12 @@ class VectorMesh:
         self.x = x
         self.y = y
         self.z = z
+        self.func = None
         self.x_mesh, self.y_mesh, self.z_mesh = meshgrid(x, y, z)
-        self.data = self.data()
+        self.data = self.data(self.x_mesh, self.y_mesh, self.z_mesh)
 
-    class data:
-        def __init__(self, x_mesh, y_mesh, z_mesh):
+    class data():
+        def __init__(self, x_mesh = None, y_mesh = None, z_mesh = None):
             self.x = x_mesh.ravel()
             self.y = y_mesh.ravel()
             self.z = z_mesh.ravel()
@@ -141,10 +145,10 @@ class VectorMesh:
     def field(self, func_system, func, **kwargs):
         self.func = func
         self.u_mesh, self.v_mesh, self.w_mesh = meshgrid(self.x, self.y, self.z)
-        from ElectroMagneticField.src.SpecialOperators import XYZ_to_Function
-        for i in range(len(self.x_mesh)):
-            for j in range(len(self.y_mesh)):
-                for k in range(len(self.z_mesh)):
+        from src.SpecialOperators import XYZ_to_Function
+        for i in range(len(self.x)):
+            for j in range(len(self.y)):
+                for k in range(len(self.z)):
                     result_vector = XYZ_to_Function(self.x_mesh[i, j, k], self.y_mesh[i, j, k], self.z_mesh[i, j, k], func_system, func, **kwargs)
                     self.u_mesh[i][j][k] = result_vector.coeff(C.i)
                     self.v_mesh[i][j][k] = result_vector.coeff(C.j)
@@ -153,10 +157,35 @@ class VectorMesh:
         self.data.v = self.v_mesh.ravel()
         self.data.w = self.w_mesh.ravel()
 
-    def plotlyConeData(self, title = PrintVector(self.func), **kwargs):
+    def offset_field(self, origin=[0,0,0]):
+        self.data.x += origin[0]
+        self.data.y += origin[1]
+        self.data.z += origin[2]
+
+    def plotlyConeData(self, title = None, **kwargs):
+        if self.func == None:
+            raise ValueError("You must set a function to the field before plotting it.")
         import plotly.graph_objects as go
         data = go.Cone(x=self.data.x, y=self.data.y, z=self.data.z,
                 u=self.data.u, v=self.data.v, w=self.data.w,
                 colorscale='Inferno', colorbar=dict(title=title),
                 sizemode="absolute", sizeref=0.1)
         return data
+
+def cylinder(origin = [0,0,0], cylinder_radius = 1, cylinder_height=1,  **kwargs):
+    if not hasattr(cylinder, "N"):
+        cylinder.N = 0
+    from numpy import pi, linspace, meshgrid, cos, sin
+    cylinder_height = linspace(0, cylinder_height, 100)
+    phi = linspace(0, 2*pi, 100)
+    phi_mesh, height_mesh = meshgrid(phi, cylinder_height)
+    x_mesh = cylinder_radius * cos(phi_mesh) + origin[0]
+    y_mesh = cylinder_radius * sin(phi_mesh) + origin[1]
+    z_mesh = height_mesh + origin[2]
+    import plotly.graph_objects as go
+    surface = go.Surface(x=x_mesh, y=y_mesh, z=z_mesh,
+                name=f"cylinder_{cylinder.N}",
+                colorscale=[[0, 'lightblue'], [1, 'blue']], showscale=False,
+                showlegend=False, **kwargs)
+    cylinder.N += 1
+    return surface
