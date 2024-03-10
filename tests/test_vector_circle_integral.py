@@ -1,0 +1,1 @@
+#TODO: test run of vector_circle_integral function, and compere it sympy vector_integrate function
