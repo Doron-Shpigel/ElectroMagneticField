@@ -58,4 +58,55 @@ def symetric_on_derivative(expr, system, variable=[]):
         raise ValueError("system must be a valid coordinate system: C, P or S.")
     return expr
 
+def vector_path_integral(V, cor1, cor2, cor3):
+    if not isinstance(V, Vector):
+        raise ValueError("V must be a Vector")
+    system = V._sys
+    if system == C:
+        x_int = Integral((V.coeff(C.i)), cor1).doit()
+        y_int = Integral((V.coeff(C.j)), cor2).doit()
+        z_int = Integral((V.coeff(C.k)), cor3).doit()
+        return x_int + y_int + z_int
+    elif system == P:
+        r_int = Integral((V.coeff(P.i)), cor1).doit()
+        if isinstance(cor1, tuple):
+            phi_int = Integral((cor1[0]*V.coeff(P.j)), cor2).doit()
+        else:
+            phi_int = Integral((cor1*V.coeff(P.j)), cor2).doit()
+        z_int = Integral((V.coeff(P.k)), cor3).doit()
+        return r_int + phi_int + z_int
+    elif system == S:
+        r_int= Integral((V.coeff(S.i)), cor1).doit()
+        cor1sym = cor1
+        cor2sym = cor2
+        if isinstance(cor1, tuple):
+            cor1sym = cor1[0]
+        if isinstance(cor2, tuple):
+            cor2sym = cor2[0]
+        theta_int = Integral((cor1sym*V.coeff(S.j)), cor2).doit()
+        phi_int = Integral((cor1sym*sin(cor2sym)*V.coeff(S.k)), cor3).doit()
+        return r_int + theta_int + phi_int
+    else:
+        raise ValueError("V must be a Vector of a valid coordinate system: C, P or S.")
+    
+def vector_circle_integral(V, radius):
+    if not isinstance(V, Vector):
+        raise ValueError("V must be a Vector")
+    if radius <= 0:
+        raise ValueError("radius must be greater than 0")
+    system = V._sys
+    if system == C:
+        t = symbols('t')
+        x = radius * cos(t)
+        y = radius * sin(t)
+        return vector_path_integral(V.subs({x: radius * cos(t), y: radius * sin(t)}),
+                                    (t, 0, 2 * pi), (t, 0, 2 * pi), (t, 0, 2 * pi))
+    elif system == P:
+        return vector_path_integral(V, radius,
+                                    (P.phi, 0, 2*pi), (P.z, 0, 0))
+    elif system == S:
+        return vector_path_integral(V, radius,
+                                    (S.phi, 0, 2*pi), (S.theta, 0, 0))
+    else:
+        raise ValueError("V must be a Vector of a valid coordinate system: C, P or S.")
 
