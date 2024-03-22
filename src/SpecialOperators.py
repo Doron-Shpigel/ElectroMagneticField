@@ -1,5 +1,5 @@
-from sympy import sin, cos, acos, atan2, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative, Integral, integrate
-from sympy.vector import Vector, cross, CoordSys3D, ParametricRegion, ImplicitRegion, vector_integrate, Del, curl, express, divergence, gradient, ParametricIntegral, matrix_to_vector
+from sympy import sin, cos, acos, atan2, sqrt, exp, pi, symbols, UnevaluatedExpr, latex, Piecewise, Function, solve, Derivative, Integral, integrate, diff
+from sympy.vector import Vector, cross, CoordSys3D, ParametricRegion, ImplicitRegion, vector_integrate, Del, curl, express, divergence, gradient, ParametricIntegral, matrix_to_vector, is_conservative
 from sympy.matrices import Matrix, eye, zeros, ones, diag, GramSchmidt
 
 
@@ -68,12 +68,17 @@ def vector_path_integral(V, cor1, cor2, cor3):
         z_int = Integral((V.coeff(C.k)), cor3).doit()
         return x_int + y_int + z_int
     elif system == P:
-        r_int = Integral((V.coeff(P.i)), cor1).doit()
         if isinstance(cor1, tuple):
+            r_int = Integral((V.coeff(P.i)), cor1).doit()
             phi_int = Integral((cor1[0]*V.coeff(P.j)), cor2).doit()
+            if cor1[1] == cor1[2]:
+                phi_int = phi_int.subs(P.r, cor1[0])
         else:
+            r_int = 0
             phi_int = Integral((cor1*V.coeff(P.j)), cor2).doit()
+            phi_int = phi_int.subs(P.r, cor1)
         z_int = Integral((V.coeff(P.k)), cor3).doit()
+
         return r_int + phi_int + z_int
     elif system == S:
         r_int= Integral((V.coeff(S.i)), cor1).doit()
@@ -94,13 +99,21 @@ def vector_circle_integral(V, radius):
         raise ValueError("V must be a Vector")
     if radius <= 0:
         raise ValueError("radius must be greater than 0")
+    if is_conservative(V):
+        print("The vector field is conservative")
+        return 0
     system = V._sys
     if system == C:
         t = symbols('t')
         x = radius * cos(t)
         y = radius * sin(t)
-        return vector_path_integral(V.subs({x: radius * cos(t), y: radius * sin(t)}),
-                                    (t, 0, 2 * pi), (t, 0, 2 * pi), (t, 0, 2 * pi))
+        V = V.subs({C.x: x, C.y: y})
+        Vi = V.coeff(C.i)*radius*diff(x, t) * C.i
+        Vj = V.coeff(C.j)*radius*diff(y, t) * C.j
+        Vk = V.coeff(C.k) * C.k
+        V = Vi + Vj + Vk
+        return vector_path_integral(V,
+                                    (t, 0, 2 * pi), (t, 0, 2 * pi), (C.z, 0, 0))
     elif system == P:
         return vector_path_integral(V, radius,
                                     (P.phi, 0, 2*pi), (P.z, 0, 0))
