@@ -1,12 +1,8 @@
-#TODO: test run of vector_circle_integral function, and compere it sympy vector_integrate function
-import sys
-import os
 
-# Add the 'src' directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from Vectors import coords, VectorMesh, Cartesian_to_Spherical, Cartesian_to_Cylindrical
-from SpecialOperators import XYZ_to_Function, vector_circle_integral, vector_path_integral
+
+from src.Vectors import coords, VectorMesh, Cartesian_to_Spherical, Cartesian_to_Cylindrical
+from src.SpecialOperators import XYZ_to_Function, vector_circle_integral, vector_path_integral
 
 from numpy import linspace
 import sympy

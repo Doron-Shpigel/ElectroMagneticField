@@ -1,11 +1,8 @@
-import sys
 import os
 
-# Add the 'src' directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from Vectors import coords, VectorMesh, Cartesian_to_Spherical, Cartesian_to_Cylindrical
-from SpecialOperators import XYZ_to_Function
+from src.Vectors import coords, VectorMesh, Cartesian_to_Spherical, Cartesian_to_Cylindrical
+from src.SpecialOperators import XYZ_to_Function
 
 from numpy import linspace
 
