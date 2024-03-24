@@ -17,7 +17,7 @@ def change_derivatives_to_constant_by_denominator(expr, denominator, constant):
     return new_expr
 
 def XYZ_to_Function(x_mesh, y_mesh, z_mesh, func_system, func, **kwargs):
-    from src.Vectors import Cartesian_to_Spherical, Cartesian_to_Cylindrical
+    from .Vectors import Cartesian_to_Spherical, Cartesian_to_Cylindrical
     if func_system == C:
         return func(x_mesh, y_mesh, z_mesh, **kwargs)
     elif func_system == P:

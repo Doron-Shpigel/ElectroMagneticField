@@ -145,7 +145,7 @@ class VectorMesh:
     def field(self, func_system, func, **kwargs):
         self.func = func
         self.u_mesh, self.v_mesh, self.w_mesh = meshgrid(self.x, self.y, self.z)
-        from src.SpecialOperators import XYZ_to_Function
+        from .SpecialOperators import XYZ_to_Function
         for i in range(len(self.x)):
             for j in range(len(self.y)):
                 for k in range(len(self.z)):
