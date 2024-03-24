@@ -18,3 +18,4 @@ S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*
 from .src.VectorPathIntegral import vector_path_integral, vector_circle_integral
 from .src.Vectors import NewVector, NewVectorFunction, PrintVector, VectorMesh
 from .src.SpecialOperators import change_derivatives_to_constant_by_denominator, XYZ_to_Function
+from .src.Plots import plot_polar_heatmap
