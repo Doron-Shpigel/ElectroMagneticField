@@ -15,6 +15,6 @@ C = CoordSys3D('C') #(x, y, z)
 P = C.create_new('P', transformation='cylindrical', variable_names = ["r", "phi", "z"]) #r, phi, z: (r*cos(phi), r*sin(phi), z)
 S = C.create_new('S', transformation='spherical') #r, theta, phi: (r*sin(theta)*cos(phi), r*sin(theta)*sin(phi),r*cos(theta))
 
-from src.VectorPathIntegral import vector_path_integral, vector_circle_integral
-from src.Vectors import NewVector, NewVectorFunction, PrintVector, VectorMesh
-from src.SpecialOperators import change_derivatives_to_constant_by_denominator, XYZ_to_Function
+from .src.VectorPathIntegral import vector_path_integral, vector_circle_integral
+from .src.Vectors import NewVector, NewVectorFunction, PrintVector, VectorMesh
+from .src.SpecialOperators import change_derivatives_to_constant_by_denominator, XYZ_to_Function
