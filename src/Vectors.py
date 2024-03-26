@@ -6,7 +6,7 @@ from sympy.geometry import Point, Circle, Triangle
 from sympy import init_printing
 from sympy.printing import latex
 from sympy import Integral, integrate
-from numpy import meshgrid, ravel, sqrt
+from numpy import meshgrid, ravel, sqrt, max, min, maximum
 
 def coords():
     #Initial coordinate systems setup
@@ -133,26 +133,25 @@ class VectorMesh:
         self.y = y
         self.z = z
         self.func = None
-        self.x_mesh, self.y_mesh, self.z_mesh = meshgrid(x, y, z)
-        self.data = self.data(self.x_mesh, self.y_mesh, self.z_mesh)
+        self._x_mesh, self._y_mesh, self._z_mesh = meshgrid(x, y, z)
+        self.data = self.data(self._x_mesh, self._y_mesh, self._z_mesh)
 
     class data():
         def __init__(self, x_mesh = None, y_mesh = None, z_mesh = None):
+            self.u_mesh = 0
+            self.v_mesh = 0
+            self.w_mesh = 0
+            self.x_mesh = x_mesh
+            self.y_mesh = y_mesh
+            self.z_mesh = z_mesh
             self.x = x_mesh.ravel()
             self.y = y_mesh.ravel()
             self.z = z_mesh.ravel()
-            self.u = 0
-            self.v = 0
-            self.w = 0
-        def update_distance(self, axis='xyz'):
-            if axis == 'xyz':
-                self.distance = sqrt((self.u)**2 + (self.v)**2 + (self.w)**2)
-            elif axis == 'xy':
-                self.distance = sqrt((self.u)**2 + (self.v)**2)
-            elif axis == 'yz':
-                self.distance = sqrt((self.v)**2 + (self.w)**2)
-            elif axis == 'xz':
-                self.distance = sqrt((self.u)**2 + (self.w)**2)
+            self.u = 0 #u component of the vector field after ravel()
+            self.v = 0 #v component of the vector field after ravel()
+            self.w = 0 #w component of the vector field after ravel()
+        def update_distance(self):
+            self.distance = sqrt((self.u_mesh)**2 + (self.v_mesh)**2 + (self.w_mesh)**2)
             self.max_distance = max(self.distance)
             self.min_distance = min(self.distance)
 
@@ -163,10 +162,13 @@ class VectorMesh:
         for i in range(len(self.x)):
             for j in range(len(self.y)):
                 for k in range(len(self.z)):
-                    result_vector = XYZ_to_Function(self.x_mesh[i, j, k], self.y_mesh[i, j, k], self.z_mesh[i, j, k], func_system, func, **kwargs)
+                    result_vector = XYZ_to_Function(self._x_mesh[i, j, k], self._y_mesh[i, j, k], self._z_mesh[i, j, k], func_system, func, **kwargs)
                     self.u_mesh[i][j][k] = result_vector.coeff(C.i)
                     self.v_mesh[i][j][k] = result_vector.coeff(C.j)
                     self.w_mesh[i][j][k] = result_vector.coeff(C.k)
+        self.data.u_mesh += self.u_mesh
+        self.data.v_mesh += self.v_mesh
+        self.data.w_mesh += self.w_mesh
         self.data.u += self.u_mesh.ravel()
         self.data.v += self.v_mesh.ravel()
         self.data.w += self.w_mesh.ravel()
@@ -176,6 +178,33 @@ class VectorMesh:
         self.data.x += origin[0]
         self.data.y += origin[1]
         self.data.z += origin[2]
+
+    def extract_plane_meshgrid(self, plane, x_mesh=None, y_mesh=None, z_mesh=None):
+        if plane == 'xy':
+            if x_mesh is None:
+                return y_mesh[:,:,0]
+            elif y_mesh is None:
+                return x_mesh[:,:,0]
+            else:
+                return x_mesh[:,:,0], y_mesh[:,:,0]
+        elif plane == 'xz':
+            if x_mesh is None:
+                return z_mesh[:,0,:]
+            elif z_mesh is None:
+                return x_mesh[:,0,:]
+            else:
+                return x_mesh[:,0,:], z_mesh[:,0,:]
+        elif plane == 'yz':
+            if y_mesh is None and z_mesh is None:
+                return x_mesh[0,:,:]
+            elif y_mesh is None and z_mesh is not None:
+                return z_mesh[0,:,:]
+            elif z_mesh is None and y_mesh is not None:
+                return y_mesh[0,:,:]
+            else:
+                return y_mesh[0,:,:], z_mesh[0,:,:]
+        else:
+            raise ValueError("Invalid plane specified. Valid options are 'xy', 'xz', or 'yz'.")
 
     def plotlyConeData(self, title = None, **kwargs):
         if self.func == None:
@@ -189,59 +218,48 @@ class VectorMesh:
     def plotlyArrowData(self, plane="xy", title = None, **kwargs):
         if self.func == None:
             raise ValueError("You must set a function to the field before plotting it.")
-        self.data.update_distance(axis=plane)
-        def A_W_R(arr):#arr_without_repeats
-            arr_without_repeats = []
-            n=4
-            for i in range(0, len(arr), n):
-                arr_without_repeats.append(arr[i])
-            return arr_without_repeats
-        x = A_W_R(self.data.x)
-        y = A_W_R(self.data.y)
-        z = A_W_R(self.data.z)
-        u = A_W_R(self.data.u)
-        v = A_W_R(self.data.v)
-        w = A_W_R(self.data.w)
-
-        if plane == "xy":
-            vectors=[[x, u], [y, v]]
-        elif plane == "yz":
-            vectors=[[y, v], [z, w]]
-        elif plane == "xz":
-            vectors=[[x, u], [z, w]]
+        self.data.update_distance()
+        xs, ys = self.extract_plane_meshgrid(plane, self._x_mesh, self._y_mesh, self._z_mesh)
+        xd, yd = self.extract_plane_meshgrid(plane, self.data.u_mesh, self.data.v_mesh, self.data.w_mesh)
+        xs, ys = xs.ravel(), ys.ravel()
+        xd, yd = xd.ravel(), yd.ravel()
+        vectors = [[xs, xd], [ys, yd]]
+        distance_arr = self.extract_plane_meshgrid(plane, x_mesh=self.data.distance).ravel()
         def scalemap(x, in_min, in_max, out_min, out_max):
             return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
         def noramlize(x, y):
             norm = sqrt(x**2 + y**2)
             return x/norm, y/norm
         data = []
-        for i in range(len(x)):
-            x_point = vectors[0][0][i]
-            y_point = vectors[1][0][i]
-            x_direction = vectors[0][1][i]
-            y_direction = vectors[1][1][i]
-            dt=0.001
-            distance = A_W_R(self.data.distance)[i]
-            x_direction_Norm, y_direction_Norm = noramlize(x_direction, y_direction)
-            arrow_size = 25*scalemap(distance, self.data.min_distance, self.data.max_distance, 0.5, 1)
-            heat = scalemap(distance, max(self.data.min_distance,self.data.max_distance/4) , self.data.max_distance, 0, 1)
+        for i in range(len(xs)): #for each vector point in the mesh
+            x_point = vectors[0][0][i] #x component of the vector
+            y_point = vectors[1][0][i] #y component of the vector
+            x_direction = vectors[0][1][i] #x component of the direction vector
+            y_direction = vectors[1][1][i] #y component of the direction vector
+            dt=0.001 #diferential distance
+            distance = distance_arr[i]
+            x_direction_Norm, y_direction_Norm = noramlize(x_direction, y_direction) #normalized direction vector
+            arrow_size = 25*scalemap(distance, self.data.min_distance, self.data.max_distance, 0.5, 1) #arrow size based on the magnitude of the vector
+            heat = scalemap(distance, maximum(self.data.min_distance,self.data.max_distance/4) , self.data.max_distance, 0, 1) #heat color based on the magnitude of the vector
             import plotly
             heat_color = plotly.colors.sequential.Inferno
             import plotly.graph_objects as go
-            data.append(
+            data.append(# add vector point to data
                 go.Scatter(
-                    x=[x_point - x_direction_Norm*dt, x_point, x_point + x_direction_Norm*dt],
-                    y=[y_point - y_direction_Norm*dt, y_point, y_point + y_direction_Norm*dt],
-                    mode="markers",
-                    marker =  dict(size=[20, arrow_size, 0], symbol= "arrow", angle = 0, angleref="previous",
-                    color = plotly.colors.sample_colorscale(heat_color, [heat])[0].replace('-',''),
+                    x=[
+                        x_point - x_direction_Norm*dt, x_point, x_point + x_direction_Norm*dt], # dt before and after the point
+                    y=[
+                        y_point - y_direction_Norm*dt, y_point, y_point + y_direction_Norm*dt], # dt before and after the point
+                    mode="markers", #markers only
+                    marker =  dict(#marker properties
+                        size=[0, arrow_size, 0], symbol= "arrow", angle = 0, angleref="previous",
+                    color = plotly.colors.sample_colorscale(heat_color, [heat])[0].replace('-',''),#absolute value of the RGB color
                     line=dict(color="black", width=1)),
-                    line=dict(color='black', width=0.5),
-                    showlegend=False,
-                    # hoveron="points",
-                    name=f"{x_point:.2f} "+f"{y_point:.2f}",
-                    textfont=dict(size=20, color="black"),
+                    line=dict( #line properties
+                        color='black', width=0.5),
+                    # hover box text: x, y, norm
                     hovertemplate="x: " + f"{x_point:.2f}" + "<br>y: " + f"{y_point:.2f}" + "<br>norm: " + f"{distance:.2f}" + "<extra></extra>",
+                    showlegend=False #no legend
                 )
             )
         return data

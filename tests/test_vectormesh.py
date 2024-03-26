@@ -17,7 +17,7 @@ x = linspace(-5, 5, 10)
 y = linspace(-5, 5, 10)
 z = linspace(0, 2, 4)
 
-H = VectorMesh(x, y, z)
+H = VectorMesh(x, y, z) 
 H.field(P, simpleField, A = 1, B = 1)
 
 
@@ -41,7 +41,7 @@ if not os.path.exists(export_subdirectory):
 final_directory = os.path.join(export_subdirectory, filename)
 fig1.write_html(final_directory)
 
-data2 = H.plotlyArrowData()
+data2 = H.plotlyArrowData(plane="xy")
 layout2 = go.Layout(
     title="2D Vector Field original",
     xaxis=dict(title="X"),
@@ -49,6 +49,31 @@ layout2 = go.Layout(
     legend=dict(orientation="h")
 )
 fig2 = go.Figure(data = data2, layout=layout2)
-filename = "test_vectormesh_arrow.html"
+filename = "test_vectormesh_arrow_xy.html"
 final_directory = os.path.join(export_subdirectory, filename)
 fig2.write_html(final_directory)
+
+data3 = H.plotlyArrowData(plane="xz")
+layout3 = go.Layout(
+    title="2D Vector Field original",
+    xaxis=dict(title="X"),
+    yaxis=dict(title="Z"),
+    legend=dict(orientation="h")
+)
+fig3 = go.Figure(data = data3, layout=layout3)
+filename = "test_vectormesh_arrow_xz.html"
+final_directory = os.path.join(export_subdirectory, filename)
+fig3.write_html(final_directory)
+
+data4 = H.plotlyArrowData(plane="yz")
+layout4 = go.Layout(
+    title="2D Vector Field original",
+    xaxis=dict(title="Y"),
+    yaxis=dict(title="Z"),
+    legend=dict(orientation="h")
+)
+fig4 = go.Figure(data = data4, layout=layout4)
+filename = "test_vectormesh_arrow_yz.html"
+final_directory = os.path.join(export_subdirectory, filename)
+fig4.write_html(final_directory)
+
