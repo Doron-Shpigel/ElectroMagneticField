@@ -52,5 +52,3 @@ fig2 = go.Figure(data = data2, layout=layout2)
 filename = "test_vectormesh_arrow.html"
 final_directory = os.path.join(export_subdirectory, filename)
 fig2.write_html(final_directory)
-
-print(max(H.data.distance))
