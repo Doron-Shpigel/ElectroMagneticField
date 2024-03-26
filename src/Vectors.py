@@ -6,7 +6,7 @@ from sympy.geometry import Point, Circle, Triangle
 from sympy import init_printing
 from sympy.printing import latex
 from sympy import Integral, integrate
-from numpy import meshgrid, ravel
+from numpy import meshgrid, ravel, sqrt
 
 def coords():
     #Initial coordinate systems setup
@@ -141,6 +141,20 @@ class VectorMesh:
             self.x = x_mesh.ravel()
             self.y = y_mesh.ravel()
             self.z = z_mesh.ravel()
+            self.u = 0
+            self.v = 0
+            self.w = 0
+        def update_distance(self, axis='xyz'):
+            if axis == 'xyz':
+                self.distance = sqrt((self.u)**2 + (self.v)**2 + (self.w)**2)
+            elif axis == 'xy':
+                self.distance = sqrt((self.u)**2 + (self.v)**2)
+            elif axis == 'yz':
+                self.distance = sqrt((self.v)**2 + (self.w)**2)
+            elif axis == 'xz':
+                self.distance = sqrt((self.u)**2 + (self.w)**2)
+            self.max_distance = max(self.distance)
+            self.min_distance = min(self.distance)
 
     def field(self, func_system, func, **kwargs):
         self.func = func
@@ -153,9 +167,10 @@ class VectorMesh:
                     self.u_mesh[i][j][k] = result_vector.coeff(C.i)
                     self.v_mesh[i][j][k] = result_vector.coeff(C.j)
                     self.w_mesh[i][j][k] = result_vector.coeff(C.k)
-        self.data.u = self.u_mesh.ravel()
-        self.data.v = self.v_mesh.ravel()
-        self.data.w = self.w_mesh.ravel()
+        self.data.u += self.u_mesh.ravel()
+        self.data.v += self.v_mesh.ravel()
+        self.data.w += self.w_mesh.ravel()
+        self.data.update_distance()
 
     def offset_field(self, origin=[0,0,0]):
         self.data.x += origin[0]
@@ -171,6 +186,67 @@ class VectorMesh:
                 colorscale='Inferno', colorbar=dict(title=title),
                 sizemode="absolute", sizeref=0.1)
         return data
+    def plotlyArrowData(self, plane="xy", title = None, **kwargs):
+        if self.func == None:
+            raise ValueError("You must set a function to the field before plotting it.")
+        self.data.update_distance(axis=plane)
+        def A_W_R(arr):#arr_without_repeats
+            arr_without_repeats = []
+            n=4
+            for i in range(0, len(arr), n):
+                arr_without_repeats.append(arr[i])
+            return arr_without_repeats
+        x = A_W_R(self.data.x)
+        y = A_W_R(self.data.y)
+        z = A_W_R(self.data.z)
+        u = A_W_R(self.data.u)
+        v = A_W_R(self.data.v)
+        w = A_W_R(self.data.w)
+
+        if plane == "xy":
+            vectors=[[x, u], [y, v]]
+        elif plane == "yz":
+            vectors=[[y, v], [z, w]]
+        elif plane == "xz":
+            vectors=[[x, u], [z, w]]
+        def scalemap(x, in_min, in_max, out_min, out_max):
+            return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+        def noramlize(x, y):
+            norm = sqrt(x**2 + y**2)
+            return x/norm, y/norm
+        data = []
+        for i in range(len(x)):
+            x_point = vectors[0][0][i]
+            y_point = vectors[1][0][i]
+            x_direction = vectors[0][1][i]
+            y_direction = vectors[1][1][i]
+            dt=0.001
+            distance = A_W_R(self.data.distance)[i]
+            x_direction_Norm, y_direction_Norm = noramlize(x_direction, y_direction)
+            arrow_size = 25*scalemap(distance, self.data.min_distance, self.data.max_distance, 0.5, 1)
+            heat = scalemap(distance, max(self.data.min_distance,self.data.max_distance/4) , self.data.max_distance, 0, 1)
+            import plotly
+            heat_color = plotly.colors.sequential.Inferno
+            import plotly.graph_objects as go
+            data.append(
+                go.Scatter(
+                    x=[x_point - x_direction_Norm*dt, x_point, x_point + x_direction_Norm*dt],
+                    y=[y_point - y_direction_Norm*dt, y_point, y_point + y_direction_Norm*dt],
+                    mode="markers",
+                    marker =  dict(size=[20, arrow_size, 0], symbol= "arrow", angle = 0, angleref="previous",
+                    color = plotly.colors.sample_colorscale(heat_color, [heat])[0].replace('-',''),
+                    line=dict(color="black", width=1)),
+                    line=dict(color='black', width=0.5),
+                    showlegend=False,
+                    # hoveron="points",
+                    name=f"{x_point:.2f} "+f"{y_point:.2f}",
+                    textfont=dict(size=20, color="black"),
+                    hovertemplate="x: " + f"{x_point:.2f}" + "<br>y: " + f"{y_point:.2f}" + "<br>norm: " + f"{distance:.2f}" + "<extra></extra>",
+                )
+            )
+        return data
+
+
 
 def cylinder(origin = [0,0,0], cylinder_radius = 1, cylinder_height=1,  **kwargs):
     if not hasattr(cylinder, "N"):
